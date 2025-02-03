@@ -8,6 +8,21 @@ module "cloudfront" {
     transformed_s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
       origin_id   = "TransformedS3Bucket"
+
+      s3_origin_config = {
+        origin_access_identity = module.cloudfront_oac.cloudfront_origin_access_identity_path
+      }
+    }
+
+    lambda_failover = {
+      domain_name = module.lambda_function.lambda_function_invoke_arn
+      origin_id   = "LambdaFailover"
+
+      custom_origin_config = {
+        http_port  = 80
+        https_port = 443
+        origin_protocol_policy = "https-only"
+      }
     }
   }
 

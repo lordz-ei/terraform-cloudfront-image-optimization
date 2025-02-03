@@ -5,7 +5,15 @@ module "original_s3_bucket" {
 
   bucket = var.original_image_bucket_name
   acl    = "private"
+
+  control_object_ownership = true
+  object_ownership         = "ObjectWriter"
+
+  versioning = {
+    enabled = true
+  }
 }
+
 
 module "transformed_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -13,7 +21,15 @@ module "transformed_s3_bucket" {
 
   bucket = var.transformed_image_bucket_name
   acl    = "private"
+
+  control_object_ownership = true
+  object_ownership         = "ObjectWriter"
+
+  versioning = {
+    enabled = true
+  }
 }
+
 
 module "cloudfront_logs" {
   source  = "terraform-aws-modules/s3-bucket/aws"
@@ -21,4 +37,11 @@ module "cloudfront_logs" {
 
   bucket = var.cloudfront_log_bucket_name
   acl    = "log-delivery-write"
+  
+  control_object_ownership = true
+  object_ownership         = "ObjectWriter"
+
+  versioning = {
+    enabled = true
+  }
 }
