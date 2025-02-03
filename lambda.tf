@@ -10,6 +10,7 @@ module "image_optimization_lambda" {
 
   source_path = "./src/image-optimization"
   
+  create_lambda_function_url = true
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
