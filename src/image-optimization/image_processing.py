@@ -1,130 +1,182 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 import os
-import json
-import boto3
+import time
 import io
-from urllib.parse import unquote
-from PIL import Image
-import PIL.Image
+import base64
+import boto3
+from PIL import Image, ImageOps
 
-# AWS S3 Client
-s3_client = boto3.client("s3")
+# Initialize the S3 client
+s3Client = boto3.client('s3')
 
-# Load Environment Variables
-S3_ORIGINAL_IMAGE_BUCKET = os.getenv("originalImageBucketName")
-S3_TRANSFORMED_IMAGE_BUCKET = os.getenv("transformedImageBucketName")
+S3_ORIGINAL_IMAGE_BUCKET = os.environ.get('originalImageBucketName')
+S3_TRANSFORMED_IMAGE_BUCKET = os.environ.get('transformedImageBucketName')
 TRANSFORMED_IMAGE_CACHE_TTL = int(os.getenv("transformedImageCacheTTL", 86400))  # Default: 1 day
 MAX_IMAGE_SIZE = int(os.getenv("maxImageSize", 5000))  # Max allowed width/height
 
-def lambda_handler(event, context):
-    """ Main Lambda function for processing image requests """
+def handler(event, context=None):
+    # Validate if this is a GET request
+    if not event.get("requestContext") or not event["requestContext"].get("http") or not (event["requestContext"]["http"].get("method") == 'GET'):
+        return sendError(400, 'Only GET method is supported', event)
+    # An example of expected path is /images/rio/1.jpeg/format=auto,width=100 or /images/rio/1.jpeg/original where /images/rio/1.jpeg is the path of the original image
+    imagePathArray = event["requestContext"]["http"]["path"].split('/')
+    # get the requested image operations
+    operationsPrefix = imagePathArray.pop()
+    # get the original image path images/rio/1.jpg
+    imagePathArray.pop(0)
+    originalImagePath = '/'.join(imagePathArray)
 
-    # Ensure it's a GET request
-    if event.get("requestContext", {}).get("http", {}).get("method") != "GET":
-        return send_error(400, "Only GET method is supported")
-
-    # Extract image path from request
-    path = event["rawPath"]  # Example: /images/rio/1.jpeg/format=webp,width=100
-    query_params = event.get("queryStringParameters", {})
-
-    # Parse image path and transformation options
-    image_key, transformations = parse_image_path(path, query_params)
-
-    if not image_key:
-        return send_error(400, "Invalid image request path")
-
-    # Check if the transformed image already exists
-    transformed_key = generate_transformed_key(image_key, transformations)
-    if check_s3_object_exists(S3_TRANSFORMED_IMAGE_BUCKET, transformed_key):
-        return redirect_to_s3(S3_TRANSFORMED_IMAGE_BUCKET, transformed_key)
-
-    # Fetch original image from S3
-    image = fetch_image_from_s3(S3_ORIGINAL_IMAGE_BUCKET, image_key)
-    if image is None:
-        return send_error(404, "Original image not found")
-
-    # Process image
-    processed_image = process_image(image, transformations)
-
-    # Save transformed image to S3
-    upload_image_to_s3(S3_TRANSFORMED_IMAGE_BUCKET, transformed_key, processed_image)
-
-    # Redirect to the cached image
-    return redirect_to_s3(S3_TRANSFORMED_IMAGE_BUCKET, transformed_key)
-
-def parse_image_path(path, query_params):
-    """ Extract image key and transformation parameters from the request """
-    parts = path.strip("/").split("/")
-    if len(parts) < 2:
-        return None, {}
-
-    image_key = "/".join(parts[:-1])  # Extract image path
-    transformations = query_params  # Extract transformations from query params
-
-    return image_key, transformations
-
-def generate_transformed_key(image_key, transformations):
-    """ Generate a unique S3 key for the transformed image """
-    transformation_string = "_".join([f"{k}-{v}" for k, v in transformations.items()])
-    return f"transformed/{transformation_string}/{image_key}"
-
-def check_s3_object_exists(bucket, key):
-    """ Check if an object exists in S3 """
+    startTime = time.perf_counter() * 1000
+    # Downloading original image
     try:
-        s3_client.head_object(Bucket=bucket, Key=key)
-        return True
-    except s3_client.exceptions.ClientError:
-        return False
+        getOriginalImageCommandOutput = s3Client.get_object(Bucket=S3_ORIGINAL_IMAGE_BUCKET, Key=originalImagePath)
+        print(f"Got response from S3 for {originalImagePath}")
+        originalImageBody = getOriginalImageCommandOutput["Body"].read()
+        contentType = getOriginalImageCommandOutput.get("ContentType")
+    except Exception as error:
+        return sendError(500, 'Error downloading original image', error)
 
-def fetch_image_from_s3(bucket, key):
-    """ Fetch an image from S3 """
     try:
-        s3_object = s3_client.get_object(Bucket=bucket, Key=key)
-        return Image.open(io.BytesIO(s3_object["Body"].read()))
-    except Exception as e:
-        print(f"Error fetching image: {e}")
-        return None
+        # Open the image using Pillow
+        transformedImage = Image.open(io.BytesIO(originalImageBody))
+    except Exception as error:
+        return sendError(500, 'Error opening original image', error)
 
-def process_image(image, transformations):
-    """ Apply transformations (resize, format change) """
-    width = int(transformations.get("width", image.width))
-    height = int(transformations.get("height", image.height))
-    format_ = transformations.get("format", "JPEG").upper()
+    # Get image orientation to rotate if needed
+    imageMetadata = transformedImage._getexif() if hasattr(transformedImage, "_getexif") else None
 
-    if width > MAX_IMAGE_SIZE or height > MAX_IMAGE_SIZE:
-        width, height = min(width, MAX_IMAGE_SIZE), min(height, MAX_IMAGE_SIZE)
+    # execute the requested operations 
+    operationsParts = operationsPrefix.split(',')
+    operationsJSON = dict(op.split('=') for op in operationsParts if '=' in op)
+    # variable holding the server timing header value
+    timingLog = 'img-download;dur=' + str(int(time.perf_counter() * 1000 - startTime))
+    startTime = time.perf_counter() * 1000
+    try:
+        # check if resizing is requested
+        resizingOptions = {}
+        if 'width' in operationsJSON:
+            resizingOptions['width'] = int(operationsJSON['width'])
+        if 'height' in operationsJSON:
+            resizingOptions['height'] = int(operationsJSON['height'])
+        if resizingOptions:
+            # Get current image size
+            orig_width, orig_height = transformedImage.size
+            new_width = resizingOptions.get('width')
+            new_height = resizingOptions.get('height')
+            # Calculate the missing dimension to maintain aspect ratio if needed
+            if new_width and not new_height:
+                new_height = int((orig_height * new_width) / orig_width)
+            elif new_height and not new_width:
+                new_width = int((orig_width * new_height) / orig_height)
+            transformedImage = transformedImage.resize((new_width, new_height))
+        # check if rotation is needed
+        if imageMetadata and 274 in imageMetadata:
+            # Use Pillow's auto rotation based on EXIF data
+            transformedImage = ImageOps.exif_transpose(transformedImage)
+        # check if formatting is requested
+        if 'format' in operationsJSON:
+            isLossy = False
+            fmt = operationsJSON['format']
+            if fmt == 'jpeg':
+                contentType = 'image/jpeg'
+                isLossy = True
+            elif fmt == 'gif':
+                contentType = 'image/gif'
+            elif fmt == 'webp':
+                contentType = 'image/webp'
+                isLossy = True
+            elif fmt == 'png':
+                contentType = 'image/png'
+            elif fmt == 'avif':
+                contentType = 'image/avif'
+                isLossy = True
+            else:
+                contentType = 'image/jpeg'
+                isLossy = True
+            output_format = fmt.upper() if fmt != 'jpeg' else 'JPEG'
+            # Prepare parameters for saving
+            save_kwargs = {}
+            if 'quality' in operationsJSON and isLossy:
+                save_kwargs['quality'] = int(operationsJSON['quality'])
+            # Convert the image to the specified format by saving to a buffer
+            buffer = io.BytesIO()
+            transformedImage.save(buffer, format=output_format, **save_kwargs)
+            transformedImageBytes = buffer.getvalue()
+        else:
+            # If not format is precised, Sharp converts svg to png by default https://github.com/aws-samples/image-optimization/issues/48
+            if contentType == 'image/svg+xml':
+                contentType = 'image/png'
+            buffer = io.BytesIO()
+            # Preserve original format if not specified; Pillow may not support SVG so we default to PNG conversion
+            transformedImage.save(buffer, format=transformedImage.format if transformedImage.format else 'PNG')
+            transformedImageBytes = buffer.getvalue()
+    except Exception as error:
+        return sendError(500, 'error transforming image', error)
+    timingLog = timingLog + ',img-transform;dur=' + str(int(time.perf_counter() * 1000 - startTime))
 
-    image = image.resize((width, height))
+    # handle gracefully generated images bigger than a specified limit (e.g. Lambda output object limit)
+    imageTooBig = len(transformedImageBytes) > MAX_IMAGE_SIZE
 
-    output_stream = io.BytesIO()
-    image.save(output_stream, format=format_)
-    output_stream.seek(0)
+    # upload transformed image back to S3 if required in the architecture
+    if S3_TRANSFORMED_IMAGE_BUCKET:
+        startTime = time.perf_counter() * 1000
+        try:
+            s3Client.put_object(
+                Body=transformedImageBytes,
+                Bucket=S3_TRANSFORMED_IMAGE_BUCKET,
+                Key=originalImagePath + '/' + operationsPrefix,
+                ContentType=contentType,
+                CacheControl=TRANSFORMED_IMAGE_CACHE_TTL
+            )
+            timingLog = timingLog + ',img-upload;dur=' + str(int(time.perf_counter() * 1000 - startTime))
+            # If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
+            if imageTooBig:
+                return {
+                    "statusCode": 302,
+                    "headers": {
+                        "Location": "/" + originalImagePath + "?" + operationsPrefix.replace(",", "&"),
+                        "Cache-Control": "private,no-store",
+                        "Server-Timing": timingLog
+                    }
+                }
+        except Exception as error:
+            logError('Could not upload transformed image to S3', error)
 
-    return output_stream
+    # Return error if the image is too big and a redirection to the generated image was not possible, else return transformed image
+    if imageTooBig:
+        return sendError(403, 'Requested transformed image is too big', '')
+    else:
+        return {
+            "statusCode": 200,
+            "body": base64.b64encode(transformedImageBytes).decode('utf-8'),
+            "isBase64Encoded": True,
+            "headers": {
+                "Content-Type": contentType,
+                "Cache-Control": TRANSFORMED_IMAGE_CACHE_TTL,
+                "Server-Timing": timingLog
+            }
+        }
 
-def upload_image_to_s3(bucket, key, image_stream):
-    """ Upload the transformed image to S3 """
-    s3_client.put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=image_stream,
-        ContentType="image/jpeg",
-        CacheControl=f"public, max-age={TRANSFORMED_IMAGE_CACHE_TTL}"
-    )
+def sendError(statusCode, body, error):
+    logError(body, error)
+    return { "statusCode": statusCode, "body": body }
 
-def redirect_to_s3(bucket, key):
-    """ Redirect to the transformed image stored in S3 """
-    s3_url = f"https://{bucket}.s3.amazonaws.com/{key}"
-    return {
-        "statusCode": 302,
-        "headers": {
-            "Location": s3_url
+def logError(body, error):
+    print('APPLICATION ERROR', body)
+    print(error)
+    
+if __name__ == "__main__":
+    # Example event for testing purposes
+    test_event = {
+        "requestContext": {
+            "http": {
+                "method": "GET",
+                "path": "/images/rio/1.jpeg/format=jpeg,width=100"
+            }
         }
     }
-
-def send_error(status_code, message):
-    """ Return an error response """
-    return {
-        "statusCode": status_code,
-        "body": json.dumps({"error": message}),
-        "headers": {"Content-Type": "application/json"}
-    }
+    # Call handler for testing
+    response = handler(test_event)
+    print(response)

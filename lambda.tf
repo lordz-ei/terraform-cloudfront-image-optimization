@@ -18,8 +18,8 @@ module "image_optimization_lambda" {
   ]
 
   environment_variables = {
-    S3_ORIGINAL_IMAGE_BUCKET = module.original_s3_bucket.s3_bucket_id
-    S3_TRANSFORMED_IMAGE_BUCKET = module.transformed_s3_bucket.s3_bucket_id
+    originalImageBucketName = module.original_s3_bucket.s3_bucket_id
+    transformedImageBucketName = module.transformed_s3_bucket.s3_bucket_id
   }
 }
 
