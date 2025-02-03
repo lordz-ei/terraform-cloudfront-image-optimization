@@ -8,7 +8,7 @@ module "image_optimization_lambda" {
   memory_size   = 512
   timeout       = 10
 
-  source_path = "./src/image-optimization"
+  source_path = file("${path.module}/src/image_optimization")
   
   allowed_triggers = {
     cloudfront = {
