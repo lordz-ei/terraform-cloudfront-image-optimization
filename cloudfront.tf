@@ -21,7 +21,7 @@ module "cloudfront" {
     }
 
     lambda_failover = {
-      domain_name = module.image_optimization_lambda.lambda_function_url
+      domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
       origin_id   = "LambdaFailover"
     }
   }
