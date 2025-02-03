@@ -11,6 +11,7 @@ module "image_optimization_lambda" {
   source_path = "./src/image-optimization"
   
   create_lambda_function_url = true
+  authorization_type         = "AWS_IAM"
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
