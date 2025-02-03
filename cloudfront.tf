@@ -1,22 +1,23 @@
 module "cloudfront" {
   source  = "terraform-aws-modules/cloudfront/aws"
-  version = "~> 2.0"
+  version = "~> 4.0"
 
   comment = "Image Optimization CloudFront with Failover"
 
-  create_origin_access_identity = true
-
-  origin_access_identities = {
-    transformed_s3_bucket = "TransformedS3Bucket"
+  create_origin_access_control = true
+  origin_access_control = {
+    s3_oac = {
+      description      = "CloudFront access to S3"
+      origin_type      = "s3"
+      signing_behavior = "always"
+      signing_protocol = "sigv4"
+    }
   }
   
   origin = {
     transformed_s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
-      s3_origin_config = {
-        origin_access_identity = "transformed_s3_bucket" # key in `origin_access_identities`
-        # cloudfront_access_identity_path = "origin-access-identity/cloudfront/E5IGQAA1QO48Z" # external OAI resource
-      }
+      origin_access_control = "s3_oac"
     }
 
     lambda_failover = {
