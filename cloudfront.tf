@@ -22,7 +22,7 @@ module "cloudfront" {
   }
   
   origin = {
-    transformed_s3 = {
+    s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
       origin_access_control = "s3_oac"
       origin_shield = {
@@ -31,8 +31,9 @@ module "cloudfront" {
       }
     }
 
-    lambda_failover = {
+    lambda = {
       domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
+      origin_access_control = "lambda_oac"
       custom_origin_config = {
         http_port              = 80
         https_port             = 443
@@ -46,11 +47,11 @@ module "cloudfront" {
     }
   }
 
-   origin_group = {
+  origin_group = {
     group_one = {
       failover_status_codes      = [403, 404, 500, 502]
-      primary_member_origin_id   = "transformed_s3"
-      secondary_member_origin_id = "lambda_failover"
+      primary_member_origin_id   = "s3"
+      secondary_member_origin_id = "lambda"
     }
   }
   
