@@ -23,6 +23,8 @@ module "image_optimization_lambda" {
   environment_variables = {
     originalImageBucketName = module.original_s3_bucket.s3_bucket_id
     transformedImageBucketName = module.transformed_s3_bucket.s3_bucket_id
+    maxImageSize = var.max_image_size
+    transformedImageCacheTTL = var.image_cache_ttl
   }
 }
 

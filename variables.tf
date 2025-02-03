@@ -35,3 +35,15 @@ variable "max_ttl" {
   type        = number
   default     = 2592000
 }
+
+variable "max_image_size" {
+  description = "Maximum image size in bytes"
+  type        = number
+  default     = 4700000
+}
+
+variable "image_cache_ttl" {
+  description = "TTL for transformed images in seconds"
+  type        = string
+  default = "max-age=31622400"
+}

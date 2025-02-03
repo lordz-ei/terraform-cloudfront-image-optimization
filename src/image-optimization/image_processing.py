@@ -13,8 +13,8 @@ s3Client = boto3.client('s3')
 
 S3_ORIGINAL_IMAGE_BUCKET = os.environ.get('originalImageBucketName')
 S3_TRANSFORMED_IMAGE_BUCKET = os.environ.get('transformedImageBucketName')
-TRANSFORMED_IMAGE_CACHE_TTL = int(os.getenv("transformedImageCacheTTL", 86400))  # Default: 1 day
-MAX_IMAGE_SIZE = int(os.getenv("maxImageSize", 5000))  # Max allowed width/height
+TRANSFORMED_IMAGE_CACHE_TTL = os.environ.get('transformedImageCacheTTL')
+MAX_IMAGE_SIZE = int(os.environ.get('maxImageSize'))
 
 def handler(event, context=None):
     # Validate if this is a GET request
