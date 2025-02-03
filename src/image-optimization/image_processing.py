@@ -20,16 +20,21 @@ def handler(event, context=None):
     # Validate if this is a GET request
     if not event.get("requestContext") or not event["requestContext"].get("http") or not (event["requestContext"]["http"].get("method") == 'GET'):
         return sendError(400, 'Only GET method is supported', event)
-    # An example of expected path is /images/rio/1.jpeg/format=auto,width=100 or /images/rio/1.jpeg/original where /images/rio/1.jpeg is the path of the original image
+    
+    # Example expected path:
+    # /images/rio/1.jpeg/format=jpeg,width=100 or /images/rio/1.png/format=jpeg,width=100
+    # where /images/rio/1.jpeg is the key of the original image in S3.
     imagePathArray = event["requestContext"]["http"]["path"].split('/')
-    # get the requested image operations
+    # The last element is the operations (e.g., format, width, etc.)
     operationsPrefix = imagePathArray.pop()
-    # get the original image path images/rio/1.jpg
-    imagePathArray.pop(0)
+    # Remove the leading empty element (if the path starts with a slash)
+    if imagePathArray[0] == "":
+        imagePathArray.pop(0)
+    # The remaining elements form the original image path
     originalImagePath = '/'.join(imagePathArray)
-
+    
     startTime = time.perf_counter() * 1000
-    # Downloading original image
+    # Download the original image from S3
     try:
         getOriginalImageCommandOutput = s3Client.get_object(Bucket=S3_ORIGINAL_IMAGE_BUCKET, Key=originalImagePath)
         print(f"Got response from S3 for {originalImagePath}")
@@ -37,51 +42,56 @@ def handler(event, context=None):
         contentType = getOriginalImageCommandOutput.get("ContentType")
     except Exception as error:
         return sendError(500, 'Error downloading original image', error)
-
+    
+    # Open the image using Pillow
     try:
-        # Open the image using Pillow
         transformedImage = Image.open(io.BytesIO(originalImageBody))
     except Exception as error:
         return sendError(500, 'Error opening original image', error)
-
-    # Get image orientation to rotate if needed
+    
+    # Get image orientation from EXIF to auto-rotate if needed
     imageMetadata = transformedImage._getexif() if hasattr(transformedImage, "_getexif") else None
-
-    # execute the requested operations 
+    
+    # Process the requested operations
     operationsParts = operationsPrefix.split(',')
     operationsJSON = dict(op.split('=') for op in operationsParts if '=' in op)
-    # variable holding the server timing header value
+    
+    # Track timing for diagnostics
     timingLog = 'img-download;dur=' + str(int(time.perf_counter() * 1000 - startTime))
     startTime = time.perf_counter() * 1000
+    
     try:
-        # check if resizing is requested
+        # Resize image if width or height is provided
         resizingOptions = {}
         if 'width' in operationsJSON:
             resizingOptions['width'] = int(operationsJSON['width'])
         if 'height' in operationsJSON:
             resizingOptions['height'] = int(operationsJSON['height'])
         if resizingOptions:
-            # Get current image size
             orig_width, orig_height = transformedImage.size
             new_width = resizingOptions.get('width')
             new_height = resizingOptions.get('height')
-            # Calculate the missing dimension to maintain aspect ratio if needed
+            # Calculate the missing dimension to maintain aspect ratio if only one is provided
             if new_width and not new_height:
                 new_height = int((orig_height * new_width) / orig_width)
             elif new_height and not new_width:
                 new_width = int((orig_width * new_height) / orig_height)
             transformedImage = transformedImage.resize((new_width, new_height))
-        # check if rotation is needed
+        
+        # Auto-rotate the image based on EXIF data if available
         if imageMetadata and 274 in imageMetadata:
-            # Use Pillow's auto rotation based on EXIF data
             transformedImage = ImageOps.exif_transpose(transformedImage)
-        # check if formatting is requested
+        
+        # Check if formatting is requested
         if 'format' in operationsJSON:
-            isLossy = False
             fmt = operationsJSON['format']
+            isLossy = False
             if fmt == 'jpeg':
                 contentType = 'image/jpeg'
                 isLossy = True
+                # Convert image to RGB if it has transparency (alpha channel)
+                if transformedImage.mode in ('RGBA', 'LA') or (transformedImage.mode == 'P' and 'transparency' in transformedImage.info):
+                    transformedImage = transformedImage.convert('RGB')
             elif fmt == 'gif':
                 contentType = 'image/gif'
             elif fmt == 'webp':
@@ -93,33 +103,41 @@ def handler(event, context=None):
                 contentType = 'image/avif'
                 isLossy = True
             else:
+                # Default to JPEG if an unsupported format is specified
                 contentType = 'image/jpeg'
                 isLossy = True
+                if transformedImage.mode in ('RGBA', 'LA') or (transformedImage.mode == 'P' and 'transparency' in transformedImage.info):
+                    transformedImage = transformedImage.convert('RGB')
+            
+            # Set the output format accordingly
             output_format = fmt.upper() if fmt != 'jpeg' else 'JPEG'
-            # Prepare parameters for saving
+            # Prepare any save parameters (such as quality for lossy formats)
             save_kwargs = {}
             if 'quality' in operationsJSON and isLossy:
                 save_kwargs['quality'] = int(operationsJSON['quality'])
-            # Convert the image to the specified format by saving to a buffer
+            
+            # Save the transformed image to a buffer in the requested format
             buffer = io.BytesIO()
             transformedImage.save(buffer, format=output_format, **save_kwargs)
             transformedImageBytes = buffer.getvalue()
         else:
-            # If not format is precised, Sharp converts svg to png by default https://github.com/aws-samples/image-optimization/issues/48
+            # If no explicit format is requested, maintain the original format.
+            # For example, if the image is an SVG, convert it to PNG.
             if contentType == 'image/svg+xml':
                 contentType = 'image/png'
             buffer = io.BytesIO()
-            # Preserve original format if not specified; Pillow may not support SVG so we default to PNG conversion
+            # Save using the original image format if available, otherwise default to PNG.
             transformedImage.save(buffer, format=transformedImage.format if transformedImage.format else 'PNG')
             transformedImageBytes = buffer.getvalue()
     except Exception as error:
-        return sendError(500, 'error transforming image', error)
+        return sendError(500, 'Error transforming image', error)
+    
     timingLog = timingLog + ',img-transform;dur=' + str(int(time.perf_counter() * 1000 - startTime))
-
-    # handle gracefully generated images bigger than a specified limit (e.g. Lambda output object limit)
+    
+    # Determine if the generated image is too large (e.g., exceeding Lambda's payload limits)
     imageTooBig = len(transformedImageBytes) > MAX_IMAGE_SIZE
-
-    # upload transformed image back to S3 if required in the architecture
+    
+    # Upload the transformed image back to S3 if a bucket is specified
     if S3_TRANSFORMED_IMAGE_BUCKET:
         startTime = time.perf_counter() * 1000
         try:
@@ -131,7 +149,7 @@ def handler(event, context=None):
                 CacheControl=TRANSFORMED_IMAGE_CACHE_TTL
             )
             timingLog = timingLog + ',img-upload;dur=' + str(int(time.perf_counter() * 1000 - startTime))
-            # If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
+            # If the image is too big, redirect to the S3 object rather than returning it directly.
             if imageTooBig:
                 return {
                     "statusCode": 302,
@@ -143,8 +161,8 @@ def handler(event, context=None):
                 }
         except Exception as error:
             logError('Could not upload transformed image to S3', error)
-
-    # Return error if the image is too big and a redirection to the generated image was not possible, else return transformed image
+    
+    # Return an error if the image is too big and a redirection wasn't possible, otherwise return the transformed image
     if imageTooBig:
         return sendError(403, 'Requested transformed image is too big', '')
     else:
@@ -164,19 +182,19 @@ def sendError(statusCode, body, error):
     return { "statusCode": statusCode, "body": body }
 
 def logError(body, error):
-    print('APPLICATION ERROR', body)
+    print('APPLICATION ERROR:', body)
     print(error)
-    
+
 if __name__ == "__main__":
-    # Example event for testing purposes
+    # Example event for local testing purposes.
     test_event = {
         "requestContext": {
             "http": {
                 "method": "GET",
-                "path": "/images/rio/1.jpeg/format=jpeg,width=100"
+                # Example: convert a PNG image to JPEG with a width of 100 pixels.
+                "path": "/images/rio/1.png/format=jpeg,width=100"
             }
         }
     }
-    # Call handler for testing
     response = handler(test_event)
     print(response)
