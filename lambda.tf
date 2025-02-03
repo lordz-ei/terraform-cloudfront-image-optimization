@@ -3,7 +3,7 @@ module "image_optimization_lambda" {
   version = "~> 3.0"
 
   function_name = "image-optimization"
-  handler       = "image_processing.lambda_handler"
+  handler       = "image_processing.handler"
   runtime       = "python3.9"
   memory_size   = 512
   timeout       = 10
