@@ -1,0 +1,14 @@
+# This CODEOWNERS file ensures only repository owners can make changes
+# Each line represents a file pattern followed by one or more owners
+
+# These owners will be the default owners for everything in the repository
+* @owner
+
+# Protect all files in all directories
+/** @lordz-ei
+
+# Protect specific file types
+*.* @lordz-ei
+
+# Protect the CODEOWNERS file itself
+CODEOWNERS @lordz-ei
