@@ -18,4 +18,6 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
   function_name = module.image_optimization_lambda.lambda_function_name
   principal     = "cloudfront.amazonaws.com"
   source_arn    = module.cloudfront.cloudfront_distribution_arn
+
+  depends_on = [ module.cloudfront ]
 }

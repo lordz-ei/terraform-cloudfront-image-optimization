@@ -93,4 +93,6 @@ module "cloudfront" {
     cloudfront_default_certificate = true
   }
 }
+
+depends_on = [ module.image_optimization_lambda ]
 }
