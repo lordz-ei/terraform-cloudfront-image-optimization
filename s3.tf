@@ -1,12 +1,13 @@
 #Create S3 Buckets using terraform-aws-modules
-resource "random_uuid" "random_uuid" {
+resource "random_id" "random_id" {
+  byte_length = 6
 }
 
 module "original_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.original_image_bucket_name}-${random_uuid.random_uuid.result}"
+  bucket = "${var.original_image_bucket_name}-${random_id.random_id.id}"
   acl    = "private"
 
   control_object_ownership = true
@@ -22,7 +23,7 @@ module "transformed_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.transformed_image_bucket_name}-${random_uuid.random_uuid.result}"
+  bucket = "${var.transformed_image_bucket_name}-${random_id.random_id.id}"
   acl    = "private"
 
   control_object_ownership = true
@@ -38,7 +39,7 @@ module "cloudfront_logs" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.cloudfront_log_bucket_name}-${random_uuid.random_uuid.result}"
+  bucket = "${var.cloudfront_log_bucket_name}-${random_id.random_id.id}"
   
   control_object_ownership = true
   object_ownership         = "ObjectWriter"
