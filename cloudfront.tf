@@ -47,13 +47,13 @@ module "cloudfront" {
     }
   }
 
-  # origin_group = {
-  #   group_one = {
-  #     failover_status_codes      = [403, 404, 500, 502]
-  #     primary_member_origin_id   = "s3"
-  #     secondary_member_origin_id = "lambda"
-  #   }
-  # }
+  origin_group = {
+    lambda_failover = {
+      failover_status_codes      = [403, 404, 500, 502]
+      primary_member_origin_id   = "s3"
+      secondary_member_origin_id = "lambda"
+    }
+  }
   
   default_cache_behavior = {
     target_origin_id       = "s3"
