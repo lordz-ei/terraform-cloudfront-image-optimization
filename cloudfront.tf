@@ -31,29 +31,29 @@ module "cloudfront" {
       }
     }
 
-    lambda = {
-      domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
-      origin_access_control = "lambda_oac"
-      custom_origin_config = {
-        http_port              = 80
-        https_port             = 443
-        origin_protocol_policy = "https-only"
-        origin_ssl_protocols   = ["TLSv1.2"]
-      }
-      origin_shield = {
-        enabled              = true
-        origin_shield_region = var.aws_region
-      }
-    }
+    # lambda = {
+    #   domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
+    #   origin_access_control = "lambda_oac"
+    #   custom_origin_config = {
+    #     http_port              = 80
+    #     https_port             = 443
+    #     origin_protocol_policy = "https-only"
+    #     origin_ssl_protocols   = ["TLSv1.2"]
+    #   }
+    #   origin_shield = {
+    #     enabled              = true
+    #     origin_shield_region = var.aws_region
+    #   }
+    # }
   }
 
-  origin_group = {
-    group_one = {
-      failover_status_codes      = [403, 404, 500, 502]
-      primary_member_origin_id   = "s3"
-      secondary_member_origin_id = "lambda"
-    }
-  }
+  # origin_group = {
+  #   group_one = {
+  #     failover_status_codes      = [403, 404, 500, 502]
+  #     primary_member_origin_id   = "s3"
+  #     secondary_member_origin_id = "lambda"
+  #   }
+  # }
   
   default_cache_behavior = {
     target_origin_id       = "TransformedS3Bucket"
