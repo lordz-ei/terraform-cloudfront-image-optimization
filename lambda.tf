@@ -12,6 +12,11 @@ module "image_optimization_lambda" {
   
   create_lambda_function_url = true
   authorization_type         = "AWS_IAM"
+
+  environment_variables = {
+    S3_ORIGINAL_IMAGE_BUCKET = module.original_s3_bucket.s3_bucket_id
+    S3_TRANSFORMED_IMAGE_BUCKET = module.transformed_s3_bucket.s3_bucket_id
+  }
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
