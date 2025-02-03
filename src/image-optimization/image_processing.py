@@ -4,6 +4,7 @@ import boto3
 import io
 from urllib.parse import unquote
 from PIL import Image
+import PIL.Image
 
 # AWS S3 Client
 s3_client = boto3.client("s3")
