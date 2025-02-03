@@ -11,11 +11,14 @@ module "image_optimization_lambda" {
   source_path = "./src/image-optimization"
   
   create_lambda_function_url = true
+  attach_policy_json = true
   authorization_type         = "AWS_IAM"
 
   layers = [
     "arn:aws:lambda:eu-west-1:770693421928:layer:Klayers-p39-pillow:1"
   ]
+
+  policy_json        = data.aws_iam_policy_document.lambda_policy_document.json
 
   environment_variables = {
     originalImageBucketName = module.original_s3_bucket.s3_bucket_id

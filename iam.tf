@@ -9,3 +9,20 @@ module "lambda_iam_role" {
   trusted_role_services = ["lambda.amazonaws.com"]
 }
 
+data "aws_iam_policy_document" "lambda_policy_document" {
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:ListBucket",
+      "s3:DeleteObject"
+    ]
+
+    resources = [
+      module.transformed_s3_bucket.s3_bucket_arn,
+      module.original_s3_bucket.s3_bucket_arn,
+      "${module.transformed_s3_bucket.s3_bucket_arn}/*",
+      "${module.original_s3_bucket.s3_bucket_arn}/*"
+    ]
+  }
+}
