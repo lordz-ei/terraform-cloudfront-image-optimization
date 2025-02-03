@@ -56,7 +56,7 @@ module "cloudfront" {
   }
   
   default_cache_behavior = {
-    target_origin_id       = "s3"
+    target_origin_id       = "lambda_failover"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
