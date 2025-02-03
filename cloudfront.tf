@@ -17,7 +17,7 @@ module "cloudfront" {
       description      = "CloudFront access to Lambda"
       origin_type      = "lambda"
       signing_behavior = "always"
-      signing_protocol = "v4"
+      signing_protocol = "sigv4"
     }
   }
   
