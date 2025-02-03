@@ -1,3 +1,22 @@
+resource "aws_cloudfront_cache_policy" "image_optimization_cache_policy" {
+  name        = "image-optimization-cache-policy"
+  comment     = "Cache policy for image optimization"
+  default_ttl = var.default_ttl
+  min_ttl = var.min_ttl
+  max_ttl = var.max_ttl
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
 module "cloudfront" {
   source  = "terraform-aws-modules/cloudfront/aws"
   version = "~> 4.0"
@@ -61,14 +80,8 @@ module "cloudfront" {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
 
-    forwarded_values = {
-      query_string = true
-      headers      = ["Accept"]
-    }
-
-    min_ttl     = var.min_ttl
-    default_ttl = var.default_ttl
-    max_ttl     = var.max_ttl
+    use_forwarded_values = false
+    cache_policy_id      = aws_cloudfront_cache_policy.image_optimization_cache_policy.id
   
     function_association = {
         # Valid keys: viewer-request, viewer-response
