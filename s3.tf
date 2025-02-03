@@ -13,6 +13,8 @@ module "original_s3_bucket" {
   control_object_ownership = true
   object_ownership         = "ObjectWriter"
 
+  force_destroy = true
+
   versioning = {
     enabled = true
   }
@@ -28,6 +30,8 @@ module "transformed_s3_bucket" {
 
   control_object_ownership = true
   object_ownership         = "ObjectWriter"
+
+  force_destroy = true
 
   versioning = {
     enabled = true
