@@ -9,5 +9,12 @@ module "image_optimization_lambda" {
   timeout       = 10
 
   source_path = "./src/image-optimization"
-  role        = module.lambda_iam_role.iam_role_arn
+  
+  allowed_triggers = {
+    cloudfront = {
+      principal  = "cloudfront.amazonaws.com"
+      source_arn = module.cloudfront.cloudfront_distribution_arn
+    }
+}
+
 }
