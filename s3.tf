@@ -7,7 +7,7 @@ module "original_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.original_image_bucket_name}-${random_id.random_id.id}"
+  bucket = lower("${var.original_image_bucket_name}-${random_id.random_id.id}")
   acl    = "private"
 
   control_object_ownership = true
@@ -23,7 +23,7 @@ module "transformed_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.transformed_image_bucket_name}-${random_id.random_id.id}"
+  bucket = lower("${var.transformed_image_bucket_name}-${random_id.random_id.id}")
   acl    = "private"
 
   control_object_ownership = true
@@ -39,7 +39,7 @@ module "cloudfront_logs" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
 
-  bucket = "${var.cloudfront_log_bucket_name}-${random_id.random_id.id}"
+  bucket = lower("${var.cloudfront_log_bucket_name}-${random_id.random_id.id}")
   
   control_object_ownership = true
   object_ownership         = "ObjectWriter"
