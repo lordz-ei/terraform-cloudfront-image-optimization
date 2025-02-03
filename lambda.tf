@@ -13,6 +13,10 @@ module "image_optimization_lambda" {
   create_lambda_function_url = true
   authorization_type         = "AWS_IAM"
 
+  layers = [
+    "arn:aws:lambda:eu-west-1:770693421928:layer:Klayers-p39-pillow:1"
+  ]
+
   environment_variables = {
     S3_ORIGINAL_IMAGE_BUCKET = module.original_s3_bucket.s3_bucket_id
     S3_TRANSFORMED_IMAGE_BUCKET = module.transformed_s3_bucket.s3_bucket_id
