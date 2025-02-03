@@ -26,10 +26,12 @@ module "cloudfront" {
     default_ttl = var.default_ttl
     max_ttl     = var.max_ttl
 
-    function_association = {
-      event_type   = "viewer-request"
-      function_arn = module.cloudfront_url_rewrite.cloudfront_function_arn
-    }
+    function_association = [
+      {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cloudfront_url_rewrite.arn
+      }
+    ]
   }
 
   logging_config = {
