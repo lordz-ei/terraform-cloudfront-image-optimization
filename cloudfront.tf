@@ -26,13 +26,12 @@ module "cloudfront" {
     default_ttl = var.default_ttl
     max_ttl     = var.max_ttl
 
-    function_association = [
-      {
-        event_type   = "viewer-request"
-        function_arn = aws_cloudfront_function.cloudfront_url_rewrite.arn
-      }
-    ]
-  }
+    function_association = {
+        # Valid keys: viewer-request, viewer-response
+        viewer-request = {
+          function_arn = aws_cloudfront_function.cloudfront_url_rewrite.arn
+        }
+    }
 
   logging_config = {
     include_cookies = false
@@ -49,4 +48,5 @@ module "cloudfront" {
   viewer_certificate = {
     cloudfront_default_certificate = true
   }
+}
 }
