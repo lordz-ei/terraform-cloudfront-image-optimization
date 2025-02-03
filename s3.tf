@@ -36,7 +36,6 @@ module "cloudfront_logs" {
   version = "~> 4.5"
 
   bucket = var.cloudfront_log_bucket_name
-  acl    = "log-delivery-write"
   
   control_object_ownership = true
   object_ownership         = "ObjectWriter"
