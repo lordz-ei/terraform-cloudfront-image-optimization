@@ -23,15 +23,17 @@ module "cloudfront" {
     lambda_failover = {
       domain_name = module.image_optimization_lambda.lambda_function_invoke_arn
       origin_id   = "LambdaFailover"
-
-      custom_origin_config = {
-        http_port  = 80
-        https_port = 443
-        origin_protocol_policy = "https-only"
-      }
     }
   }
 
+   origin_group = {
+    group_one = {
+      failover_status_codes      = [403, 404, 500, 502]
+      primary_member_origin_id   = "transformed_s3"
+      secondary_member_origin_id = "lambda_failover"
+    }
+  }
+  
   default_cache_behavior = {
     target_origin_id       = "TransformedS3Bucket"
     viewer_protocol_policy = "redirect-to-https"
