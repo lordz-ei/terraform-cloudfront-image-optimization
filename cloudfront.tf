@@ -31,20 +31,20 @@ module "cloudfront" {
       }
     }
 
-    # lambda = {
-    #   domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
-    #   origin_access_control = "lambda_oac"
-    #   custom_origin_config = {
-    #     http_port              = 80
-    #     https_port             = 443
-    #     origin_protocol_policy = "https-only"
-    #     origin_ssl_protocols   = ["TLSv1.2"]
-    #   }
-    #   origin_shield = {
-    #     enabled              = true
-    #     origin_shield_region = var.aws_region
-    #   }
-    # }
+    lambda = {
+      domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
+      origin_access_control = "lambda_oac"
+      custom_origin_config = {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+      origin_shield = {
+        enabled              = true
+        origin_shield_region = var.aws_region
+      }
+    }
   }
 
   # origin_group = {
@@ -69,7 +69,7 @@ module "cloudfront" {
     min_ttl     = var.min_ttl
     default_ttl = var.default_ttl
     max_ttl     = var.max_ttl
-
+  
     function_association = {
         # Valid keys: viewer-request, viewer-response
         viewer-request = {
