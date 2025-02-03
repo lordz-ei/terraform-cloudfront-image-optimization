@@ -23,7 +23,7 @@ module "cloudfront" {
   
   origin = {
     s3 = {
-      domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
+      domain_name = module.transformed_s3_bucket.s3_bucket_bucket_regional_domain_name
       origin_access_control = "s3_oac"
       origin_shield = {
         enabled              = true
