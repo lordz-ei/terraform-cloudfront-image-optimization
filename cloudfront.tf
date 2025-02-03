@@ -15,7 +15,7 @@ module "cloudfront" {
     }
 
     lambda_failover = {
-      domain_name = module.lambda_function.lambda_function_invoke_arn
+      domain_name = module.image_optimization_lambda.lambda_function_invoke_arn
       origin_id   = "LambdaFailover"
 
       custom_origin_config = {
