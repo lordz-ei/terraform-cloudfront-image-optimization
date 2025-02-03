@@ -10,11 +10,12 @@ module "image_optimization_lambda" {
 
   source_path = "./src/image-optimization"
   
-  allowed_triggers = {
-    cloudfront = {
-      principal  = "cloudfront.amazonaws.com"
-      source_arn = module.cloudfront.cloudfront_distribution_arn
-    }
 }
 
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  statement_id  = "AllowExecutionFromCloudFront"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.image_optimization_lambda.lambda_function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = module.cloudfront.cloudfront_distribution_arn
 }

@@ -12,17 +12,36 @@ module "cloudfront" {
       signing_behavior = "always"
       signing_protocol = "sigv4"
     }
+
+    lambda_oac = {
+      description      = "CloudFront access to Lambda"
+      origin_type      = "lambda"
+      signing_behavior = "always"
+      signing_protocol = "v4"
+    }
   }
   
   origin = {
     transformed_s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
       origin_access_control = "s3_oac"
+      origin_shield = {
+        enabled              = true
+        origin_shield_region = var.aws_region
+      }
     }
 
     lambda_failover = {
       domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
-      origin_id   = "LambdaFailover"
+      custom_origin_config = {
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols  = ["TLSv1.2"]
+      }
+      origin_shield = {
+        enabled              = true
+        origin_shield_region = var.aws_region
+      }
     }
   }
 
