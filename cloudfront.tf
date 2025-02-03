@@ -4,10 +4,16 @@ module "cloudfront" {
 
   comment = "Image Optimization CloudFront with Failover"
 
+  create_origin_access_identity = true
+
+  origin_access_identities = {
+    transformed_s3_bucket = "TransformedS3Bucket"
+  }
+  
   origin = {
     transformed_s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
-      origin_id   = "TransformedS3Bucket"
+      origin_id   = "transformed_s3_bucket"
 
       s3_origin_config = {
         origin_access_identity = module.cloudfront_oac.cloudfront_origin_access_identity_path
