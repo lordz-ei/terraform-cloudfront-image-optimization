@@ -13,10 +13,9 @@ module "cloudfront" {
   origin = {
     transformed_s3 = {
       domain_name = module.transformed_s3_bucket.s3_bucket_bucket_domain_name
-      origin_id   = "transformed_s3_bucket"
-
       s3_origin_config = {
-        origin_access_identity = module.cloudfront_oac.cloudfront_origin_access_identity_path
+        origin_access_identity = "transformed_s3_bucket" # key in `origin_access_identities`
+        # cloudfront_access_identity_path = "origin-access-identity/cloudfront/E5IGQAA1QO48Z" # external OAI resource
       }
     }
 
