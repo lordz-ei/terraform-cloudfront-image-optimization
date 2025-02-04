@@ -6,6 +6,8 @@ resource "random_id" "random_id" {
 module "original_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.5"
+  
+  create_bucket = var.create_origin_bucket
 
   bucket = lower("${var.original_image_bucket_name}-${random_id.random_id.id}")
   acl    = "private"

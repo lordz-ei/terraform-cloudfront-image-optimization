@@ -3,6 +3,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "create_origin_bucket" {
+  description = "Create an S3 bucket for original images"
+  type        = bool
+  default     = true
+}
+
 variable "original_image_bucket_name" {
   description = "Name of the original image bucket"
   type        = string
