@@ -2,7 +2,7 @@
 # Each line represents a file pattern followed by one or more owners
 
 # These owners will be the default owners for everything in the repository
-* @owner
+* @lordz-ei
 
 # Protect all files in all directories
 /** @lordz-ei
