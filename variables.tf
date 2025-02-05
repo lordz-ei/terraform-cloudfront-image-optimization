@@ -51,5 +51,5 @@ variable "max_image_size" {
 variable "image_cache_ttl" {
   description = "TTL for transformed images in seconds"
   type        = string
-  default = "max-age=31622400"
+  default     = "max-age=31622400"
 }
