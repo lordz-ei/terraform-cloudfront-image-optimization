@@ -2,8 +2,8 @@ resource "aws_cloudfront_cache_policy" "image_optimization_cache_policy" {
   name        = "image-optimization-cache-policy"
   comment     = "Cache policy for image optimization"
   default_ttl = var.default_ttl
-  min_ttl = var.min_ttl
-  max_ttl = var.max_ttl
+  min_ttl     = var.min_ttl
+  max_ttl     = var.max_ttl
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config {
       cookie_behavior = "none"
@@ -20,8 +20,8 @@ resource "aws_cloudfront_cache_policy" "image_optimization_cache_policy" {
 resource "aws_cloudfront_response_headers_policy" "image_optimization_response_header_policy" {
   name    = "image-optimization-response-header-policy"
   comment = "Response header policy for image optimization"
-  
-    cors_config {
+
+  cors_config {
     access_control_allow_credentials = false
 
     access_control_allow_headers {
@@ -40,7 +40,7 @@ resource "aws_cloudfront_response_headers_policy" "image_optimization_response_h
     }
 
     access_control_max_age_sec = 600
-    origin_override = true
+    origin_override            = true
   }
 
   custom_headers_config {
@@ -80,10 +80,10 @@ module "cloudfront" {
       signing_protocol = "sigv4"
     }
   }
-  
+
   origin = {
     s3 = {
-      domain_name = module.transformed_s3_bucket.s3_bucket_bucket_regional_domain_name
+      domain_name           = module.transformed_s3_bucket.s3_bucket_bucket_regional_domain_name
       origin_access_control = "s3_oac"
       origin_shield = {
         enabled              = true
@@ -92,7 +92,7 @@ module "cloudfront" {
     }
 
     lambda = {
-      domain_name = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
+      domain_name           = "${module.image_optimization_lambda.lambda_function_url_id}.lambda-url.${data.aws_region.current.name}.on.aws"
       origin_access_control = "lambda_oac"
       custom_origin_config = {
         http_port              = 80
@@ -114,40 +114,40 @@ module "cloudfront" {
       secondary_member_origin_id = "lambda"
     }
   }
-  
+
   default_cache_behavior = {
     target_origin_id       = "lambda_failover"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
 
-    use_forwarded_values = false
-    cache_policy_id      = aws_cloudfront_cache_policy.image_optimization_cache_policy.id
+    use_forwarded_values       = false
+    cache_policy_id            = aws_cloudfront_cache_policy.image_optimization_cache_policy.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.image_optimization_response_header_policy.id
-  
+
     function_association = {
-        # Valid keys: viewer-request, viewer-response
-        viewer-request = {
-          function_arn = aws_cloudfront_function.cloudfront_url_rewrite.arn
-        }
+      # Valid keys: viewer-request, viewer-response
+      viewer-request = {
+        function_arn = aws_cloudfront_function.cloudfront_url_rewrite.arn
+      }
     }
 
-  logging_config = {
-    include_cookies = false
-    bucket          = module.cloudfront_logs.s3_bucket_bucket_domain_name
-    prefix          = "cloudfront-logs/"
-  }
+    logging_config = {
+      include_cookies = false
+      bucket          = module.cloudfront_logs.s3_bucket_bucket_domain_name
+      prefix          = "cloudfront-logs/"
+    }
 
 
     geo_restriction = {
       restriction_type = "none"
     }
-  
 
-  viewer_certificate = {
-    cloudfront_default_certificate = true
+
+    viewer_certificate = {
+      cloudfront_default_certificate = true
+    }
   }
-}
 
-depends_on = [ module.image_optimization_lambda ]
+  depends_on = [module.image_optimization_lambda]
 }

@@ -9,22 +9,22 @@ module "image_optimization_lambda" {
   timeout       = 10
 
   source_path = "./src/image-optimization"
-  
+
   create_lambda_function_url = true
-  attach_policy_json = true
+  attach_policy_json         = true
   authorization_type         = "AWS_IAM"
 
   layers = [
     "arn:aws:lambda:eu-west-1:770693421928:layer:Klayers-p39-pillow:1"
   ]
 
-  policy_json        = data.aws_iam_policy_document.lambda_policy_document.json
+  policy_json = data.aws_iam_policy_document.lambda_policy_document.json
 
   environment_variables = {
-    originalImageBucketName = module.original_s3_bucket.s3_bucket_id
+    originalImageBucketName    = module.original_s3_bucket.s3_bucket_id
     transformedImageBucketName = module.transformed_s3_bucket.s3_bucket_id
-    maxImageSize = var.max_image_size
-    transformedImageCacheTTL = var.image_cache_ttl
+    maxImageSize               = var.max_image_size
+    transformedImageCacheTTL   = var.image_cache_ttl
   }
 }
 
@@ -35,5 +35,5 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
   principal     = "cloudfront.amazonaws.com"
   source_arn    = module.cloudfront.cloudfront_distribution_arn
 
-  depends_on = [ module.cloudfront ]
+  depends_on = [module.cloudfront]
 }
