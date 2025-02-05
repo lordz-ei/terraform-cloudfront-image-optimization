@@ -47,9 +47,18 @@ module "cloudfront_image_optimization" {
   source             = "github.com/lordz-ei/terraform-cloudfront-image-optimization"
   
   # Required variables
-  origin_domain_name = "your-origin-domain.com"
+  original_image_bucket_name = "your-image-origin-s3-bucket"
+  transformed_image_bucket_name = "your-transformed-image-s3-bucket"
+  cloudfront_log_bucket_name = "your-cloudfront-logs-s3-bucket"
+
+  #(Optional) CloudFront ttl variables based on your configuration needs.
+  min_ttl = 0 #Minimum TTL for CloudFront cache, default 86400
+  default_ttl = 3600 #Default TTL for CloudFront cache, default 604800
+  max_ttl = 7200 #Maximum TTL for CloudFront cache, default 2592000
   
-  # Optional variables (customize as needed)
-  enabled            = true
-  # Add additional variables below based on your configuration needs.
+  #(Optional) Maximum image size in bytes
+  max_image_size = 1024 #Default set to 4700000
+
+  #(Optional)TTL for transformed images in seconds
+  image_cache_ttl = "max-age=96000" #Default set to "max-age=31622400"
 }
