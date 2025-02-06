@@ -9,7 +9,7 @@ module "original_s3_bucket" {
 
   create_bucket = var.create_origin_bucket
 
-  bucket = lower("${var.original_image_bucket_name}-${random_id.random_id.id}")
+  bucket = var.original_image_bucket_name
   acl    = "private"
 
   control_object_ownership = true

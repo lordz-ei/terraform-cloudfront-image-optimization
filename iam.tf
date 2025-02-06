@@ -20,9 +20,9 @@ data "aws_iam_policy_document" "lambda_policy_document" {
 
     resources = [
       module.transformed_s3_bucket.s3_bucket_arn,
-      module.original_s3_bucket.s3_bucket_arn,
       "${module.transformed_s3_bucket.s3_bucket_arn}/*",
-      "${module.original_s3_bucket.s3_bucket_arn}/*"
+      "arn:aws:s3:::${var.original_image_bucket_name}",
+      "arn:aws:s3:::${var.original_image_bucket_name}/*"
     ]
   }
 }

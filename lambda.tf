@@ -15,13 +15,13 @@ module "image_optimization_lambda" {
   authorization_type         = "AWS_IAM"
 
   layers = [
-    "arn:aws:lambda:eu-west-1:770693421928:layer:Klayers-p39-pillow:1"
+    var.lambda_layer_arn
   ]
 
   policy_json = data.aws_iam_policy_document.lambda_policy_document.json
 
   environment_variables = {
-    originalImageBucketName    = module.original_s3_bucket.s3_bucket_id
+    originalImageBucketName    = var.original_image_bucket_name
     transformedImageBucketName = module.transformed_s3_bucket.s3_bucket_id
     maxImageSize               = var.max_image_size
     transformedImageCacheTTL   = var.image_cache_ttl

@@ -19,7 +19,7 @@ Core Components:
 
 This serverless architecture ensures efficient resource usage while maintaining high performance and scalability. The system processes each image request through a well-defined flow, which is illustrated in the following diagram.
 
-<img src="architecture.png" width="900">
+![The proposed solution architecture](architecture.png)
 
 ## Overview
 
