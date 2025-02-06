@@ -6,7 +6,7 @@ variable "aws_region" {
 variable "create_origin_bucket" {
   description = "Create an S3 bucket for original images"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "original_image_bucket_name" {
@@ -52,4 +52,9 @@ variable "image_cache_ttl" {
   description = "TTL for transformed images in seconds"
   type        = string
   default     = "max-age=31622400"
+}
+
+variable "lambda_layer_arn" {
+  description = "ARN of the Lambda layer" #used for adding the Pillow library layer
+  type        = string
 }
