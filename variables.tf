@@ -9,6 +9,12 @@ variable "create_origin_bucket" {
   default     = false
 }
 
+variable "create_waf" {
+  description = "Flag to create AWS WAF (true to create, false to skip)"
+  type        = bool
+  default     = false
+}
+
 variable "original_image_bucket_name" {
   description = "Name of the original image bucket"
   type        = string
