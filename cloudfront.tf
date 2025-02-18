@@ -149,5 +149,7 @@ module "cloudfront" {
     }
   }
 
+  web_acl_id = var.create_waf ? element(aws_wafv2_web_acl.cloudfront_acl[*].id, 0) : null
+
   depends_on = [module.image_optimization_lambda]
 }
